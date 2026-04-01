@@ -161,7 +161,7 @@ loadGenerator:
 paymentService:
   create: true
   name: paymentservice
-  image: docker.io/stamalexx/paymentservice:v1.0.51
+  image: docker.io/stamalexx/paymentservice:v1.0.52
   resources:
     requests:
       cpu: 100m
