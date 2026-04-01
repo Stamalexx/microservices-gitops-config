@@ -98,7 +98,7 @@ checkoutService:
 currencyService:
   create: true
   name: currencyservice
-  image: docker.io/stamalexx/currencyservice:baseline
+  image: docker.io/stamalexx/currencyservice:v1.0.49
   resources:
     requests:
       cpu: 100m
