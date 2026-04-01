@@ -74,7 +74,7 @@ adService:
 cartService:
   create: true
   name: cartservice
-  image: docker.io/stamalexx/cartservice:baseline
+  image: docker.io/stamalexx/cartservice:v1.0.47
   resources:
     requests:
       cpu: 200m
