@@ -110,7 +110,7 @@ currencyService:
 emailService:
   create: true
   name: emailservice
-  image: docker.io/stamalexx/emailservice:baseline
+  image: docker.io/stamalexx/emailservice:v1.0.50
   resources:
     requests:
       cpu: 100m
