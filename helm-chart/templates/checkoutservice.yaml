@@ -68,7 +68,7 @@ spec:
               - ALL
           privileged: false
           readOnlyRootFilesystem: true
-        image: {{ .Values.frontend.image }}
+        image: {{ .Values.checkoutService.image }}
         ports:
         - containerPort: 5050
         readinessProbe:
