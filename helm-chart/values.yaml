@@ -62,7 +62,7 @@ securityContext:
 adService:
   create: true
   name: adservice
-  image: docker.io/stamalexx/adservice:v1.0.57
+  image: docker.io/stamalexx/adservice:v1.0.176
   resources:
     requests:
       cpu: 200m
