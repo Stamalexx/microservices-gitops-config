@@ -148,7 +148,7 @@ frontend:
 loadGenerator:
   create: true
   name: loadgenerator
-  image: docker.io/stamalexx/loadgenerator:baseline
+  image: docker.io/stamalexx/loadgenerator:v1.0.100
   checkFrontendInitContainer: true
   resources:
     requests:
