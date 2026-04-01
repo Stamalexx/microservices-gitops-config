@@ -62,7 +62,7 @@ securityContext:
 adService:
   create: true
   name: adservice
-  image: docker.io/stamalexx/adservice:v1.0.177
+  image: docker.io/stamalexx/adservice:v1.0.178
   resources:
     requests:
       cpu: 200m
@@ -110,7 +110,7 @@ currencyService:
 emailService:
   create: true
   name: emailservice
-  image: docker.io/stamalexx/emailservice:v1.0.50
+  image: docker.io/stamalexx/emailservice:v1.0.178
   resources:
     requests:
       cpu: 100m
