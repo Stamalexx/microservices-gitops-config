@@ -199,7 +199,7 @@ recommendationService:
 shippingService:
   create: true
   name: shippingservice
-  image: docker.io/stamalexx/shippingservice:baseline
+  image: docker.io/stamalexx/shippingservice:v1.0.56
   resources:
     requests:
       cpu: 100m
