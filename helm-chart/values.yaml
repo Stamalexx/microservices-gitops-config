@@ -86,7 +86,7 @@ cartService:
 checkoutService:
   create: true
   name: checkoutservice
-  image: docker.io/stamalexx/checkoutservice:baseline
+  image: docker.io/stamalexx/checkoutservice:v1.0.48
   resources:
     requests:
       cpu: 100m
