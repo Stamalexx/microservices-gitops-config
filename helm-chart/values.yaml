@@ -173,7 +173,7 @@ paymentService:
 productCatalogService:
   create: true
   name: productcatalogservice
-  image: docker.io/stamalexx/productcatalogservice:baseline
+  image: docker.io/stamalexx/productcatalogservice:v1.0.54
   # Specifies an extra latency to any request on productcatalogservice, by default no extra latency.
   extraLatency: ""
   resources:
