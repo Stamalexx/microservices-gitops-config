@@ -1,0 +1,120 @@
+pipeline {
+    agent any 
+
+    environment {
+        DOCKER_CREDS = credentials('docker-hub-creds')
+        GITHUB_TOKEN = credentials('github-token-creds')
+        APP_REPO = "github.com/Stamalexx/microservices-demo-DevOps-apply.git"
+        GITOPS_REPO = "github.com/Stamalexx/microservices-gitops-config.git"
+        // Notice we removed IMAGE_NAME and IMAGE_TAG from here. We will generate them dynamically below!
+    }
+
+    stages {
+        stage('1. Checkout & Detect Changes') {
+            steps {
+                // 1. Pull the code
+                git url: "https://${APP_REPO}", branch: 'main'
+                
+                script {
+                    // 2. Kill Switch (Loop Prevention)
+                    def lastAuthor = sh(script: "git log -1 --pretty='%an'", returnStdout: true).trim()
+                    if (lastAuthor == "Jenkins CI Server") {
+                        currentBuild.result = 'ABORTED'
+                        error("STOPPING LOOP: This change was made by the Jenkins Bot.")
+                    }
+
+                    // 3. SMART DETECT: Figure out which folders changed in the src/ directory
+                    env.CHANGED_SERVICES = ""
+                    def services = []
+                    
+                    // Look at the git history for the last commit
+                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    
+                    for (String file : changedFiles.split('\\r?\\n')) {
+                        if (file.startsWith("src/")) {
+                            def parts = file.split('/')
+                            if (parts.length > 1) {
+                                def srv = parts[1] // Grabs the folder name (e.g., 'adservice')
+                                if (!services.contains(srv)) {
+                                    services.add(srv)
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If no changes were detected (e.g., you clicked "Build" manually), fallback to the dropdown
+                    if (services.isEmpty()) {
+                        echo "No code changes detected. Using manual dropdown choice: ${params.SERVICE_NAME}"
+                        services.add(params.SERVICE_NAME)
+                    }
+                    
+                    // Save the list of services to build
+                    env.CHANGED_SERVICES = services.join(',')
+                    echo "SMART DETECT: Preparing to build -> ${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+
+        stage('2. Build and Push') {
+            steps {
+                script {
+                    // Loop through every service that changed!
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                    
+                    for (service in servicesToBuild) {
+                        if (service == null || service == "") continue;
+                        
+                        def imgName = "stamalexx/${service}"
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}"
+                        
+                        echo "========================================"
+                        echo "BUILDING AND PUSHING: ${service}"
+                        echo "========================================"
+                        
+                        sh """
+                            cd src/${service}
+                            docker build -t ${imgName}:${imgTag} .
+                            echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin
+                            docker push ${imgName}:${imgTag}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('3. Update GitOps Repo') {
+            steps {
+                dir('gitops-repo') {
+                    git url: "https://${GITOPS_REPO}", branch: 'main', changelog: false, poll: false
+                    
+                    script {
+                        def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                        
+                        sh """
+                            git config user.email "jenkins@automation.com"
+                            git config user.name "Jenkins CI Server"
+                        """
+                        
+                        // Loop through and update values.yaml for EVERY service that changed
+                        for (service in servicesToBuild) {
+                            if (service == null || service == "") continue;
+                            def imgTag = "v1.0.${env.BUILD_NUMBER}"
+                            
+                            echo " UPDATING GITOPS FOR: ${service}"
+                            sh """
+                                sed -i "s|image: docker.io/stamalexx/${service}:.*|image: docker.io/stamalexx/${service}:${imgTag}|g" helm-chart/values.yaml
+                            """
+                        }
+                        
+                        // Commit and push all the updates together
+                        sh """
+                            git add helm-chart/values.yaml
+                            git commit -m "Auto-Deploy: Updated [${env.CHANGED_SERVICES}] to v1.0.${env.BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@${GITOPS_REPO} HEAD:main
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
