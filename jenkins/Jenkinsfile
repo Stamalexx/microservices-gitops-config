@@ -2,6 +2,7 @@ pipeline {
     agent any 
 
     environment {
+        // Fetches creds
         DOCKER_CREDS = credentials('docker-hub-creds')
         GITHUB_TOKEN = credentials('github-token-creds')
         APP_REPO = "github.com/Stamalexx/microservices-demo-DevOps-apply.git"
@@ -11,10 +12,11 @@ pipeline {
     stages {
         stage('1. Checkout & Smart Detect') {
             steps {
-                git url: "https://${APP_REPO}", branch: 'main'
+                git url: "https://${APP_REPO}", branch: 'main' // Clones the 'main' branch of the application repository
                 
                 script {
-                    def lastAuthor = sh(script: "git log -1 --pretty='%an'", returnStdout: true).trim()
+                    def lastAuthor = sh(script: "git log -1 --pretty='%an'", returnStdout: true).trim() // Gets the name of the person who made the last commit
+                    // Checks if the last commit was automated by this very pipeline
                     if (lastAuthor == "Jenkins CI Server") {
                         currentBuild.result = 'ABORTED'
                         error("STOPPING LOOP: This change was made by the Jenkins Bot.")
@@ -22,22 +24,23 @@ pipeline {
 
                     env.CHANGED_SERVICES = ""
                     def services = []
-                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
-                    
+                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim() // Gets a list of files changed in the most recent commit
+                    // Loops through every single changed file
                     for (String file : changedFiles.split('\\r?\\n')) {
                         if (file.startsWith("src/")) {
                             def parts = file.split('/')
                             if (parts.length > 1) {
-                                def srv = parts[1] 
+                                def srv = parts[1]  // Extracts the folder name (which represents the microservice name)
+                                // Checks if we haven't already added this service to our list
                                 if (!services.contains(srv)) {
-                                    services.add(srv)
+                                    services.add(srv) // Adds the service name to the build list
                                 }
                             }
                         }
                     }
-                    if (services.isEmpty()) { services.add(params.SERVICE_NAME) }
+                    if (services.isEmpty()) { services.add(params.SERVICE_NAME) } // If no services were found (e.g., manual trigger), use a provided parameter instead
                     env.CHANGED_SERVICES = services.join(',')
-                    echo "🔥 SMART DETECT: Preparing to build -> ${env.CHANGED_SERVICES}"
+                    echo "SMART DETECT: Preparing to build -> ${env.CHANGED_SERVICES}" // Prints out the final list of services that will be built
                 }
             }
         }
@@ -45,17 +48,17 @@ pipeline {
         stage('2. Build Images (Local Only)') {
             steps {
                 script {
-                    def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',') // Gets the list of the changed services
+                    // Loops through each service that needs building
                     for (service in servicesToBuild) {
-                        if (service == null || service == "") continue;
+                        if (service == null || service == "") continue; // Skips the loop if the service name is empty
                         def imgName = "stamalexx/${service}"
-                        def imgTag = "v1.0.${env.BUILD_NUMBER}"
-                        
-                        echo "========================================"
-                        echo "🔨 BUILDING (BUT NOT PUSHING): ${service}"
-                        echo "========================================"
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}" // Creates a unique version tag using the Jenkins build number
+                         
+                        echo "BUILDING (BUT NOT PUSHING): ${service}"
                         
                         // We build the image, but we WAIT to push it until tests pass!
+                        // Builds the Docker image and tags it with our custom version
                         sh """
                             cd src/${service}
                             docker build -t ${imgName}:${imgTag} .
@@ -67,11 +70,12 @@ pipeline {
 
         stage('3. Spin Up Ephemeral Environment') {
             steps {
-                echo "🚀 Starting temporary local environment for testing..."
+                echo "Starting temporary local environment for testing..."
                 // The Online Boutique repo has a docker-compose file we can use
+                // Starts all microservices in the background using docker-compose
                 sh """
                     docker-compose up -d --build
-                    echo "⏳ Waiting 30 seconds for all local microservices to wake up..."
+                    echo "Waiting 30 seconds for all local microservices to wake up..."
                     sleep 30
                 """
             }
@@ -82,7 +86,13 @@ pipeline {
                 dir('playwright-tests') {
                     git url: "https://github.com/Stamalexx/microservices-playwright-testing.git", branch: 'main'
                     
-                    echo "🧪 Running Integration Tests against local Ephemeral Environment..."
+                    echo "Running Integration Tests against local Ephemeral Environment..."
+                    // The below script:
+                    // Runs a temporary Docker container, attaching it to the host's network so it can see localhost
+                    // Mounts the current directory into the container and sets it as the working directory
+                    // Passes the local environment URL to the tests as an environment variable
+                    // Specifies the official Microsoft Playwright Docker image to use
+                    // Installs test dependencies and executes the Playwright test suite
                     sh """
                         docker run --rm --network host \
                         -v \$(pwd):/e2e -w /e2e \
@@ -96,14 +106,16 @@ pipeline {
 
         stage('5. Push to Docker Hub') {
             steps {
-                echo "✅ TESTS PASSED! Proceeding to push images to Docker Hub..."
+                echo "TESTS PASSED! Proceeding to push images to Docker Hub..."
                 script {
-                    def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',') // Re-splits the list of services we built earlier
+                    // Loops through the services again
                     for (service in servicesToBuild) {
                         if (service == null || service == "") continue;
+                        // Re-defines the Docker image name and the version tag
                         def imgName = "stamalexx/${service}"
                         def imgTag = "v1.0.${env.BUILD_NUMBER}"
-                        
+                        // Logins and pushes the images to the docker repo
                         sh """
                             echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin
                             docker push ${imgName}:${imgTag}
@@ -116,13 +128,15 @@ pipeline {
         stage('6. Update GitOps Repo') {
             steps {
                 dir('gitops-repo') {
-                    git url: "https://${GITOPS_REPO}", branch: 'main', changelog: false, poll: false
+                    git url: "https://${GITOPS_REPO}", branch: 'main', changelog: false, poll: false // Clones the GitOps repository without triggering changelogs
                     script {
                         def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                        // Configures git creds
                         sh """
                             git config user.email "jenkins@automation.com"
                             git config user.name "Jenkins CI Server"
                         """
+                        // Loops through the changed services and re-defines the new version tag
                         for (service in servicesToBuild) {
                             if (service == null || service == "") continue;
                             def imgTag = "v1.0.${env.BUILD_NUMBER}"
@@ -130,6 +144,7 @@ pipeline {
                                 sed -i "s|image: docker.io/stamalexx/${service}:.*|image: docker.io/stamalexx/${service}:${imgTag}|g" helm-chart/values.yaml
                             """
                         }
+                        // Pushes the commit to GitOps repo
                         sh """
                             git add helm-chart/values.yaml
                             git commit -m "Auto-Deploy: Updated [${env.CHANGED_SERVICES}] to v1.0.${env.BUILD_NUMBER}"
@@ -144,17 +159,17 @@ pipeline {
     // THE JANITOR: This runs no matter what happens above
     post {
         always {
-            echo "🧹 Tearing down ephemeral environment and cleaning up..."
+            echo "Tearing down ephemeral environment and cleaning up..."
             // Stop and remove the temporary containers
             sh 'docker-compose down -v || true'
             // Clean up dangling images to save disk space on Jenkins
             sh 'docker image prune -f || true'
         }
         success {
-            echo "🎉 PIPELINE SUCCESS: Code tested, built, and handed off to Argo CD."
+            echo "PIPELINE SUCCESS: Code tested, built, and handed off to Argo CD."
         }
         failure {
-            echo "🚨 PIPELINE FAILED: Defective code detected! Deployment to GitOps was blocked."
+            echo "PIPELINE FAILED: Defective code detected! Deployment to GitOps was blocked."
         }
     }
 }

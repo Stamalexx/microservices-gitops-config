@@ -1,0 +1,160 @@
+pipeline { // Start of the declarative Jenkins pipeline definition
+    agent any // Instructs Jenkins to run this pipeline on any available worker node
+
+    environment { // Defines variables that will be available throughout the whole pipeline
+        DOCKER_CREDS = credentials('docker-hub-creds') // Fetches Docker Hub login details from Jenkins secret store
+        GITHUB_TOKEN = credentials('github-token-creds') // Fetches a GitHub Personal Access Token for pushing code
+        APP_REPO = "github.com/Stamalexx/microservices-demo-DevOps-apply.git" // The URL of the main application code repository
+        GITOPS_REPO = "github.com/Stamalexx/microservices-gitops-config.git" // The URL of the GitOps repository containing Helm/Kubernetes manifests
+    } // Closes the environment variables block
+
+    stages { // Begins the section where individual pipeline stages are defined
+        stage('1. Checkout & Smart Detect') { // Names the first stage: fetching code and figuring out what changed
+            steps { // Begins the actual commands for Stage 1
+                git url: "https://${APP_REPO}", branch: 'main' // Clones the 'main' branch of the application repository
+                
+                script { // Opens a Groovy script block to run custom logic
+                    def lastAuthor = sh(script: "git log -1 --pretty='%an'", returnStdout: true).trim() // Gets the name of the person who made the last commit
+                    if (lastAuthor == "Jenkins CI Server") { // Checks if the last commit was automated by this very pipeline
+                        currentBuild.result = 'ABORTED' // If it was, marks the build as aborted
+                        error("STOPPING LOOP: This change was made by the Jenkins Bot.") // Throws an error to stop the pipeline and prevent an infinite loop
+                    } // Closes the infinite loop check
+
+                    env.CHANGED_SERVICES = "" // Initializes an empty string to hold the names of changed services
+                    def services = [] // Creates an empty list to track which services need to be built
+                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim() // Gets a list of files changed in the most recent commit
+                    
+                    for (String file : changedFiles.split('\\r?\\n')) { // Loops through every single changed file
+                        if (file.startsWith("src/")) { // Checks if the changed file is inside the 'src/' directory
+                            def parts = file.split('/') // Splits the file path by slashes to isolate the folder name
+                            if (parts.length > 1) { // Ensures the path is deep enough to actually contain a service folder
+                                def srv = parts[1] // Extracts the folder name (which represents the microservice name)
+                                if (!services.contains(srv)) { // Checks if we haven't already added this service to our list
+                                    services.add(srv) // Adds the service name to the build list
+                                } // Closes the duplicate check
+                            } // Closes the path length check
+                        } // Closes the 'src/' directory check
+                    } // Closes the loop over changed files
+                    if (services.isEmpty()) { services.add(params.SERVICE_NAME) } // If no services were found (e.g., manual trigger), use a provided parameter instead
+                    env.CHANGED_SERVICES = services.join(',') // Converts the list of services into a comma-separated string
+                    echo "Preparing to build -> ${env.CHANGED_SERVICES}" // Prints out the final list of services that will be built
+                } // Closes the Groovy script block
+            } // Closes the steps for Stage 1
+        } // Closes Stage 1
+
+        stage('2. Build Images (Local Only)') { // Names the second stage: building the Docker images locally
+            steps { // Begins the commands for Stage 2
+                script { // Opens a Groovy script block for logic
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',') // Splits our comma-separated list back into an array
+                    for (service in servicesToBuild) { // Loops through each service that needs building
+                        if (service == null || service == "") continue; // Skips the loop if the service name is empty
+                        def imgName = "stamalexx/${service}" // Defines the Docker image name using the Docker Hub username and service name
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}" // Creates a unique version tag using the Jenkins build number
+                        
+                        echo "========================================" // Prints a decorative border to the console
+                        echo "BUILDING (BUT NOT PUSHING): ${service}" // Announces which service is being built
+                        echo "========================================" // Prints a decorative border to the console
+                        
+                        // We build the image, but we WAIT to push it until tests pass! // Original comment explaining the strategy
+                        sh """ // Opens a shell block to run bash commands
+                            cd src/${service} // Changes directory into the specific microservice's folder
+                            docker build -t ${imgName}:${imgTag} . // Builds the Docker image and tags it with our custom version
+                        """ // Closes the shell block
+                    } // Closes the loop through the services
+                } // Closes the Groovy script block
+            } // Closes the steps for Stage 2
+        } // Closes Stage 2
+
+        stage('3. Spin Up Ephemeral Environment') { // Names the third stage: creating a temporary test environment
+            steps { // Begins the commands for Stage 3
+                echo "Starting temporary local environment for testing..." // Prints a status message to the console
+                // The Online Boutique repo has a docker-compose file we can use // Original context comment
+                sh """ // Opens a shell block to run bash commands
+                    docker-compose up -d --build // Starts all microservices in the background using docker-compose
+                    echo "Waiting 30 seconds for all local microservices to wake up..." // Prints a waiting message
+                    sleep 30 // Pauses the pipeline for 30 seconds to give the apps time to start up
+                """ // Closes the shell block
+            } // Closes the steps for Stage 3
+        } // Closes Stage 3
+
+        stage('4. Execute E2E Playwright Tests') { // Names the fourth stage: running automated UI/integration tests
+            steps { // Begins the commands for Stage 4
+                dir('playwright-tests') { // Creates a temporary directory called 'playwright-tests' and moves into it
+                    git url: "https://github.com/Stamalexx/microservices-playwright-testing.git", branch: 'main' // Clones the separate testing repository
+                    
+                    echo "Running Integration Tests against local Ephemeral Environment..." // Prints a status message
+                    sh """ // Opens a shell block to run the tests
+                        docker run --rm --network host \\ // Runs a temporary Docker container, attaching it to the host's network so it can see localhost
+                        -v \$(pwd):/e2e -w /e2e \\ // Mounts the current directory into the container and sets it as the working directory
+                        -e FRONTEND_URL="http://localhost:8081/" \\ // Passes the local environment URL to the tests as an environment variable
+                        mcr.microsoft.com/playwright:v1.59.1-jammy \\ // Specifies the official Microsoft Playwright Docker image to use
+                        /bin/bash -c "npm install && npx playwright test" // Installs test dependencies and executes the Playwright test suite
+                    """ // Closes the shell block
+                } // Closes the directory block
+            } // Closes the steps for Stage 4
+        } // Closes Stage 4
+
+        stage('5. Push to Docker Hub') { // Names the fifth stage: uploading images (only runs if tests passed)
+            steps { // Begins the commands for Stage 5
+                echo "TESTS PASSED! Proceeding to push images to Docker Hub..." // Prints a success message
+                script { // Opens a Groovy script block for logic
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',') // Re-splits the list of services we built earlier
+                    for (service in servicesToBuild) { // Loops through the services again
+                        if (service == null || service == "") continue; // Skips empty entries
+                        def imgName = "stamalexx/${service}" // Re-defines the Docker image name
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}" // Re-defines the version tag
+                        
+                        sh """ // Opens a shell block to push the images
+                            echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin // Logs into Docker Hub securely using credentials
+                            docker push ${imgName}:${imgTag} // Uploads the successfully tested image to Docker Hub
+                        """ // Closes the shell block
+                    } // Closes the loop
+                } // Closes the Groovy script block
+            } // Closes the steps for Stage 5
+        } // Closes Stage 5
+
+        stage('6. Update GitOps Repo') { // Names the final stage: updating the configuration repo to trigger deployment
+            steps { // Begins the commands for Stage 6
+                dir('gitops-repo') { // Creates and enters a directory named 'gitops-repo'
+                    git url: "https://${GITOPS_REPO}", branch: 'main', changelog: false, poll: false // Clones the GitOps repository without triggering changelogs
+                    script { // Opens a Groovy script block
+                        def servicesToBuild = env.CHANGED_SERVICES.split(',') // Gets our list of changed services one last time
+                        sh """ // Opens a shell block
+                            git config user.email "jenkins@automation.com" // Configures the Git email for the upcoming commit
+                            git config user.name "Jenkins CI Server" // Configures the Git username for the upcoming commit
+                        """ // Closes the shell block
+                        for (service in servicesToBuild) { // Loops through the changed services
+                            if (service == null || service == "") continue; // Skips empty entries
+                            def imgTag = "v1.0.${env.BUILD_NUMBER}" // Re-defines the new version tag
+                            sh """ // Opens a shell block to modify files
+                                sed -i "s|image: docker.io/stamalexx/${service}:.*|image: docker.io/stamalexx/${service}:${imgTag}|g" helm-chart/values.yaml // Uses 'sed' to find the old image tag in values.yaml and replace it with the new one
+                            """ // Closes the shell block
+                        } // Closes the loop
+                        sh """ // Opens a shell block to commit the changes
+                            git add helm-chart/values.yaml // Stages the modified Helm configuration file
+                            git commit -m "Auto-Deploy: Updated [${env.CHANGED_SERVICES}] to v1.0.${env.BUILD_NUMBER}" // Commits the change with an automated message
+                            git push https://${GITHUB_TOKEN}@${GITOPS_REPO} HEAD:main // Pushes the commit back to GitHub using the authentication token
+                        """ // Closes the shell block
+                    } // Closes the Groovy script block
+                } // Closes the directory block
+            } // Closes the steps for Stage 6
+        } // Closes Stage 6
+    } // Closes the main stages block
+    
+    // THE JANITOR: This runs no matter what happens above // Original comment about cleanup
+    post { // Defines actions to take after all stages finish (or fail)
+        always { // Tells Jenkins to run this block regardless of success or failure
+            echo "Tearing down ephemeral environment and cleaning up..." // Prints a cleanup message
+            // Stop and remove the temporary containers // Original comment
+            sh 'docker-compose down -v || true' // Shuts down the local environment and removes volumes (the '|| true' ensures it doesn't fail the build if it crashes)
+            // Clean up dangling images to save disk space on Jenkins // Original comment
+            sh 'docker image prune -f || true' // Deletes leftover, unused Docker images from the Jenkins server to save storage space
+        } // Closes the always block
+        success { // Tells Jenkins to run this block ONLY if all stages passed
+            echo "PIPELINE SUCCESS: Code tested, built, and handed off to Argo CD." // Prints a final victory message
+        } // Closes the success block
+        failure { // Tells Jenkins to run this block ONLY if a stage failed (like tests crashing)
+            echo "PIPELINE FAILED: Defective code detected! Deployment to GitOps was blocked." // Prints an error message explaining that bad code was caught
+        } // Closes the failure block
+    } // Closes the post actions block
+} // Closes the entire pipeline definition
