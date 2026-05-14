@@ -102,7 +102,7 @@ currencyService:
   create: true
   replicas: 3
   name: currencyservice
-  image: docker.io/stamalexx/currencyservice:v1.0.49
+  image: docker.io/stamalexx/currencyservice:v1.0.196
   resources:
     requests:
       cpu: 100m
@@ -128,7 +128,7 @@ frontend:
   create: true
   replicas: 3
   name: frontend
-  image: docker.io/stamalexx/frontend:v1.0.192
+  image: docker.io/stamalexx/frontend:v1.0.196
   externalService: true
   cymbalBranding: true
   # One of: local, gcp, aws, azure, onprem, alibaba. When not set, defaults to "local" unless running in GKE, otherwise auto-sets to gcp.
