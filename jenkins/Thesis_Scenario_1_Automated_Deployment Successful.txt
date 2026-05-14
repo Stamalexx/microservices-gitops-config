@@ -1,0 +1,1000 @@
+Started by an SCM change
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/lib/jenkins/workspace/Master-CI-Pipeline
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $GITHUB_TOKEN or $DOCKER_CREDS or $DOCKER_CREDS_PSW
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (1. Checkout & Smart Detect)
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/Master-CI-Pipeline/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Stamalexx/microservices-demo-DevOps-apply.git # timeout=10
+Fetching upstream changes from https://github.com/Stamalexx/microservices-demo-DevOps-apply.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Stamalexx/microservices-demo-DevOps-apply.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 2f9f290663121ea7fed42b1b50bf0175df26b7f3 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 2f9f290663121ea7fed42b1b50bf0175df26b7f3 # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git branch -D main # timeout=10
+ > git checkout -b main 2f9f290663121ea7fed42b1b50bf0175df26b7f3 # timeout=10
+Commit message: "Merge pull request #1 from Stamalexx/change_to_the_front_end"
+ > git rev-list --no-walk 9ae1ced9180b46ae8722528bc03344d45dd8e035 # timeout=10
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ git log -1 --pretty=%an
+[Pipeline] sh
++ git diff --name-only HEAD~1 HEAD
+[Pipeline] echo
+ SMART DETECT: Preparing to build -> frontend
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (2. Build Images (Local Only))
+[Pipeline] script
+[Pipeline] {
+[Pipeline] echo
+========================================
+[Pipeline] echo
+ BUILDING (BUT NOT PUSHING): frontend
+[Pipeline] echo
+========================================
+[Pipeline] sh
++ cd src/frontend
++ docker build -t stamalexx/frontend:v1.0.192 .
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  4.502MB
+Step 1/18 : ARG BUILDPLATFORM=linux/amd64
+Step 2/18 : FROM --platform=$BUILDPLATFORM golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92 AS builder
+ ---> 32eb1b17fb28
+Step 3/18 : ARG TARGETOS=linux
+ ---> Running in 4b46c4a269a2
+ ---> Removed intermediate container 4b46c4a269a2
+ ---> 675eaf3bf5b7
+Step 4/18 : ARG TARGETARCH=amd64
+ ---> Running in fd40ffde980c
+ ---> Removed intermediate container fd40ffde980c
+ ---> 472ebbf21338
+Step 5/18 : WORKDIR /src
+ ---> Running in a0efc2b52c81
+ ---> Removed intermediate container a0efc2b52c81
+ ---> 313c1430a08f
+Step 6/18 : COPY go.mod go.sum ./
+ ---> b6b39f6a4022
+Step 7/18 : RUN go mod download
+ ---> Running in 7d2efb2f2590
+ ---> Removed intermediate container 7d2efb2f2590
+ ---> 1b751fbf3e14
+Step 8/18 : COPY . .
+ ---> 458efcac8847
+Step 9/18 : ARG SKAFFOLD_GO_GCFLAGS
+ ---> Running in 984b67fbcf98
+ ---> Removed intermediate container 984b67fbcf98
+ ---> 02f69bf8c4b7
+Step 10/18 : RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+ ---> Running in 9eff14d470fc
+ ---> Removed intermediate container 9eff14d470fc
+ ---> a971e5f5ef3a
+Step 11/18 : FROM gcr.io/distroless/static
+ ---> e2ea0f1ab0fc
+Step 12/18 : WORKDIR /src
+ ---> Using cache
+ ---> 099fe3d1cf0e
+Step 13/18 : COPY --from=builder /go/bin/frontend /src/server
+ ---> Using cache
+ ---> b4d3eff928ba
+Step 14/18 : COPY ./templates ./templates
+ ---> 399703923202
+Step 15/18 : COPY ./static ./static
+ ---> 763238724bf7
+Step 16/18 : ENV GOTRACEBACK=single
+ ---> Running in c36412a50b08
+ ---> Removed intermediate container c36412a50b08
+ ---> d691dd924ea0
+Step 17/18 : EXPOSE 8080
+ ---> Running in ed8eda5da1b4
+ ---> Removed intermediate container ed8eda5da1b4
+ ---> cab6ca01ef49
+Step 18/18 : ENTRYPOINT ["/src/server"]
+ ---> Running in 91f2c4f883e4
+ ---> Removed intermediate container 91f2c4f883e4
+ ---> ca528bab1f4c
+Successfully built ca528bab1f4c
+Successfully tagged stamalexx/frontend:v1.0.192
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (3. Spin Up Ephemeral Environment)
+[Pipeline] echo
+ Starting temporary local environment for testing...
+[Pipeline] sh
++ docker-compose up -d --build
+time="2026-05-14T07:07:07Z" level=warning msg="/var/lib/jenkins/workspace/Master-CI-Pipeline/docker-compose.yaml: `version` is obsolete"
+#0 building with "default" instance using docker driver
+
+#1 [productcatalogservice internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 ...
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.61kB 0.0s done
+#2 DONE 0.2s
+
+#3 [currencyservice internal] load build definition from Dockerfile
+#3 DONE 0.0s
+
+#1 [productcatalogservice internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.59kB 0.0s done
+#1 DONE 0.2s
+
+#4 [frontend internal] load metadata for gcr.io/distroless/static:latest
+#4 DONE 0.0s
+
+#5 [frontend internal] load metadata for docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#5 DONE 0.0s
+
+#6 [recommendationservice internal] load build definition from Dockerfile
+#6 transferring dockerfile: 1.54kB 0.0s done
+#6 DONE 0.2s
+
+#7 [recommendationservice internal] load metadata for docker.io/library/python:3.14.2-alpine@sha256:31da4cb527055e4e3d7e9e006dffe9329f84ebea79eaca0a1f1c27ce61e40ca5
+#7 DONE 0.0s
+
+#8 [emailservice internal] load build definition from Dockerfile
+#8 DONE 0.0s
+
+#9 [shippingservice internal] load build definition from Dockerfile
+#9 ...
+
+#5 [productcatalogservice internal] load metadata for docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#5 DONE 0.0s
+
+#10 [paymentservice internal] load build definition from Dockerfile
+#10 transferring dockerfile: 1.37kB 0.0s done
+#10 DONE 0.2s
+
+#4 [productcatalogservice internal] load metadata for gcr.io/distroless/static:latest
+#4 DONE 0.0s
+
+#11 [paymentservice internal] load metadata for docker.io/library/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
+#11 DONE 0.0s
+
+#9 [shippingservice internal] load build definition from Dockerfile
+#9 ...
+
+#12 [cartservice internal] load build definition from Dockerfile
+#12 transferring dockerfile: 1.63kB 0.0s done
+#12 DONE 0.3s
+
+#13 [cartservice internal] load metadata for mcr.microsoft.com/dotnet/runtime-deps:10.0.0-noble-chiseled@sha256:b857c8cb8d929183cfe4c6dd9994abba92a2639dd2dbaf06005379f815991604
+#13 DONE 0.0s
+
+#9 [shippingservice internal] load build definition from Dockerfile
+#9 transferring dockerfile: 1.61kB 0.0s done
+#9 ...
+
+#14 [frontend internal] load .dockerignore
+#14 transferring context: 48B 0.0s done
+#14 DONE 0.3s
+
+#3 [currencyservice internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.37kB 0.0s done
+#3 DONE 0.3s
+
+#15 [recommendationservice internal] load .dockerignore
+#15 transferring context: 2B 0.0s done
+#15 DONE 0.3s
+
+#11 [currencyservice internal] load metadata for docker.io/library/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
+#11 DONE 0.0s
+
+#8 [emailservice internal] load build definition from Dockerfile
+#8 transferring dockerfile: 1.51kB 0.0s done
+#8 DONE 0.3s
+
+#16 [frontend stage-1 1/5] FROM gcr.io/distroless/static:latest
+#16 DONE 0.0s
+
+#17 [frontend internal] load build context
+#17 DONE 0.0s
+
+#18 [frontend builder 1/6] FROM docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#18 DONE 0.0s
+
+#9 [shippingservice internal] load build definition from Dockerfile
+#9 DONE 0.3s
+
+#19 [productcatalogservice internal] load .dockerignore
+#19 transferring context: 48B 0.0s done
+#19 DONE 0.4s
+
+#20 [adservice internal] load build definition from Dockerfile
+#20 transferring dockerfile: 1.62kB 0.0s done
+#20 DONE 0.4s
+
+#21 [checkoutservice internal] load build definition from Dockerfile
+#21 transferring dockerfile: 1.58kB 0.0s done
+#21 DONE 0.4s
+
+#22 [recommendationservice internal] load build context
+#22 DONE 0.0s
+
+#23 [recommendationservice base 1/1] FROM docker.io/library/python:3.14.2-alpine@sha256:31da4cb527055e4e3d7e9e006dffe9329f84ebea79eaca0a1f1c27ce61e40ca5
+#23 DONE 0.0s
+
+#4 [checkoutservice internal] load metadata for gcr.io/distroless/static:latest
+#4 DONE 0.0s
+
+#5 [checkoutservice internal] load metadata for docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#5 DONE 0.0s
+
+#17 [frontend internal] load build context
+#17 ...
+
+#16 [productcatalogservice stage-1 1/5] FROM gcr.io/distroless/static:latest
+#16 DONE 0.0s
+
+#18 [productcatalogservice builder 1/6] FROM docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#18 DONE 0.0s
+
+#7 [emailservice internal] load metadata for docker.io/library/python:3.14.2-alpine@sha256:31da4cb527055e4e3d7e9e006dffe9329f84ebea79eaca0a1f1c27ce61e40ca5
+#7 DONE 0.0s
+
+#24 [adservice internal] load metadata for docker.io/library/eclipse-temurin:25.0.1_8-jre-alpine@sha256:9c65fe190cb22ba92f50b8d29a749d0f1cfb2437e09fe5fbf9ff927c45fc6e99
+#24 DONE 0.0s
+
+#25 [paymentservice auth] library/node:pull token for registry-1.docker.io
+#25 DONE 0.0s
+
+#17 [frontend internal] load build context
+#17 ...
+
+#22 [recommendationservice internal] load build context
+#22 transferring context: 304B 0.1s done
+#22 DONE 0.2s
+
+#26 [cartservice internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0.100-noble@sha256:c7445f141c04f1a6b454181bd098dcfa606c61ba0bd213d0a702489e5bd4cd71
+#26 DONE 0.6s
+
+#27 [productcatalogservice internal] load build context
+#27 transferring context: 470B 0.1s done
+#27 DONE 0.3s
+
+#17 [frontend internal] load build context
+#17 transferring context: 11.74kB 0.2s done
+#17 DONE 0.3s
+
+#28 [checkoutservice internal] load .dockerignore
+#28 transferring context: 48B 0.1s done
+#28 DONE 0.3s
+
+#29 [emailservice internal] load .dockerignore
+#29 transferring context: 2B 0.0s done
+#29 DONE 0.3s
+
+#30 [shippingservice internal] load .dockerignore
+#30 transferring context: 48B 0.0s done
+#30 DONE 0.4s
+
+#31 [cartservice internal] load .dockerignore
+#31 ...
+
+#16 [checkoutservice stage-1 1/5] FROM gcr.io/distroless/static:latest
+#16 DONE 0.0s
+
+#18 [checkoutservice builder 1/6] FROM docker.io/library/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+#18 DONE 0.0s
+
+#23 [emailservice base 1/1] FROM docker.io/library/python:3.14.2-alpine@sha256:31da4cb527055e4e3d7e9e006dffe9329f84ebea79eaca0a1f1c27ce61e40ca5
+#23 DONE 0.0s
+
+#32 [recommendationservice stage-2 2/4] WORKDIR /recommendationservice
+#32 CACHED
+
+#33 [recommendationservice stage-2 3/4] COPY --from=builder /usr/local/lib/python3.14/ /usr/local/lib/python3.14/
+#33 CACHED
+
+#34 [recommendationservice builder 2/3] COPY requirements.txt .
+#34 CACHED
+
+#35 [recommendationservice builder 1/3] RUN apk update     && apk add --no-cache g++ linux-headers     && rm -rf /var/cache/apk/*
+#35 CACHED
+
+#36 [recommendationservice builder 3/3] RUN pip install -r requirements.txt
+#36 CACHED
+
+#37 [recommendationservice stage-2 1/4] RUN apk update     && apk add --no-cache libstdc++     && rm -rf /var/cache/apk/*
+#37 CACHED
+
+#38 [recommendationservice stage-2 4/4] COPY . .
+#38 CACHED
+
+#39 [shippingservice internal] load build context
+#39 DONE 0.0s
+
+#40 [adservice auth] library/eclipse-temurin:pull token for registry-1.docker.io
+#40 DONE 0.0s
+
+#31 [cartservice internal] load .dockerignore
+#31 ...
+
+#41 [frontend builder 3/6] COPY go.mod go.sum ./
+#41 CACHED
+
+#42 [productcatalogservice builder 3/6] COPY go.mod go.sum ./
+#42 CACHED
+
+#43 [productcatalogservice builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /productcatalogservice .
+#43 CACHED
+
+#44 [productcatalogservice stage-1 3/4] COPY --from=builder /productcatalogservice ./server
+#44 CACHED
+
+#45 [productcatalogservice stage-1 2/5] WORKDIR /src
+#45 CACHED
+
+#46 [frontend builder 2/6] WORKDIR /src
+#46 CACHED
+
+#47 [productcatalogservice builder 4/6] RUN go mod download
+#47 CACHED
+
+#48 [productcatalogservice builder 5/6] COPY . .
+#48 CACHED
+
+#49 [productcatalogservice stage-1 4/4] COPY products.json .
+#49 CACHED
+
+#50 [recommendationservice] exporting to image
+#50 exporting layers done
+#50 writing image sha256:de3ab0fbdfb5fdfa5d5cfa264ef2c803274af854dbf9ec277c7030f6296ba80a 0.0s done
+#50 naming to docker.io/library/master-ci-pipeline-recommendationservice 0.0s done
+#50 DONE 0.2s
+
+#31 [cartservice internal] load .dockerignore
+#31 transferring context: 92B 0.0s done
+#31 DONE 0.5s
+
+#51 [frontend builder 4/6] RUN go mod download
+#51 CACHED
+
+#52 [frontend builder 5/6] COPY . .
+#52 ...
+
+#53 [productcatalogservice] exporting to image
+#53 exporting layers done
+#53 writing image sha256:f2fe87833d4a6366c642b2ad498c4a5053e0185e897a4846964e5c69feb8568f 0.0s done
+#53 naming to docker.io/library/master-ci-pipeline-productcatalogservice 0.0s done
+#53 DONE 0.2s
+
+#54 [cartservice builder 1/6] FROM mcr.microsoft.com/dotnet/sdk:10.0.100-noble@sha256:c7445f141c04f1a6b454181bd098dcfa606c61ba0bd213d0a702489e5bd4cd71
+#54 DONE 0.0s
+
+#55 [cartservice stage-1 1/3] FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.0-noble-chiseled@sha256:b857c8cb8d929183cfe4c6dd9994abba92a2639dd2dbaf06005379f815991604
+#55 DONE 0.0s
+
+#56 [cartservice internal] load build context
+#56 DONE 0.0s
+
+#39 [shippingservice internal] load build context
+#39 transferring context: 417B 0.0s done
+#39 DONE 0.3s
+
+#57 [checkoutservice internal] load build context
+#57 transferring context: 413B 0.0s done
+#57 DONE 0.3s
+
+#58 [emailservice internal] load build context
+#58 transferring context: 377B 0.0s done
+#58 DONE 0.4s
+
+#56 [cartservice internal] load build context
+#56 transferring context: 569B 0.0s done
+#56 DONE 0.9s
+
+#59 [currencyservice internal] load metadata for docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#59 ...
+
+#52 [frontend builder 5/6] COPY . .
+#52 DONE 1.1s
+
+#60 [shippingservice builder 5/6] COPY . .
+#60 CACHED
+
+#61 [shippingservice builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/shippingservice .
+#61 CACHED
+
+#62 [shippingservice builder 3/6] COPY go.mod go.sum ./
+#62 CACHED
+
+#63 [shippingservice builder 4/6] RUN go mod download
+#63 CACHED
+
+#64 [shippingservice stage-1 3/3] COPY --from=builder /go/bin/shippingservice /src/shippingservice
+#64 CACHED
+
+#46 [checkoutservice builder 2/6] WORKDIR /src
+#46 CACHED
+
+#65 [checkoutservice builder 4/6] RUN go mod download
+#65 CACHED
+
+#66 [checkoutservice builder 5/6] COPY . .
+#66 CACHED
+
+#67 [checkoutservice builder 3/6] COPY go.mod go.sum ./
+#67 CACHED
+
+#68 [checkoutservice builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /checkoutservice .
+#68 CACHED
+
+#45 [checkoutservice stage-1 2/5] WORKDIR /src
+#45 CACHED
+
+#69 [checkoutservice stage-1 3/3] COPY --from=builder /checkoutservice /src/checkoutservice
+#69 CACHED
+
+#70 [emailservice builder 2/3] COPY requirements.txt .
+#70 CACHED
+
+#71 [emailservice stage-2 2/4] WORKDIR /email_server
+#71 CACHED
+
+#35 [emailservice builder 1/3] RUN apk update     && apk add --no-cache g++ linux-headers     && rm -rf /var/cache/apk/*
+#35 CACHED
+
+#72 [emailservice builder 3/3] RUN pip install -r requirements.txt
+#72 CACHED
+
+#73 [emailservice stage-2 1/4] RUN apk update     && apk add --no-cache libstdc++     && rm -rf /var/cache/apk/*
+#73 CACHED
+
+#74 [emailservice stage-2 3/4] COPY --from=builder /usr/local/lib/python3.14/ /usr/local/lib/python3.14/
+#74 CACHED
+
+#75 [emailservice stage-2 4/4] COPY . .
+#75 CACHED
+
+#76 [cartservice builder 4/6] RUN dotnet restore cartservice.csproj     -a amd64
+#76 CACHED
+
+#77 [cartservice builder 5/6] COPY . .
+#77 CACHED
+
+#78 [cartservice builder 6/6] RUN dotnet publish cartservice.csproj     -p:PublishSingleFile=true     -a amd64     --self-contained true     -p:PublishTrimmed=true     -p:TrimMode=full     -c release     -o /cartservice
+#78 CACHED
+
+#79 [cartservice builder 3/6] COPY cartservice.csproj .
+#79 CACHED
+
+#80 [cartservice stage-1 2/3] WORKDIR /app
+#80 CACHED
+
+#81 [cartservice builder 2/6] WORKDIR /app
+#81 CACHED
+
+#82 [cartservice stage-1 3/3] COPY --from=builder /cartservice .
+#82 CACHED
+
+#83 [shippingservice] exporting to image
+#83 exporting layers done
+#83 writing image sha256:c0a215eaa6dd56f508d2c6d7f7770f9013ce044df8db30cd34086aef45ac656e 0.1s done
+#83 naming to docker.io/library/master-ci-pipeline-shippingservice 0.0s done
+#83 DONE 0.2s
+
+#84 [checkoutservice] exporting to image
+#84 exporting layers done
+#84 writing image sha256:10ce0b36e6e75aae063fc9e1a48e2467f6858688990ad28cb552f91b6272c703 0.0s done
+#84 naming to docker.io/library/master-ci-pipeline-checkoutservice 0.0s done
+#84 DONE 0.3s
+
+#85 [emailservice] exporting to image
+#85 exporting layers done
+#85 writing image sha256:7985c19e2ca15f3931184b3ffe034caa708276eb4eb20440659167c112649f77 0.0s done
+#85 naming to docker.io/library/master-ci-pipeline-emailservice 0.0s done
+#85 DONE 0.2s
+
+#86 [cartservice] exporting to image
+#86 exporting layers done
+#86 writing image sha256:22c51a569f2c2bdd4ea82409ae689bd09dff55f8126acd0f04239fa53409e760 0.0s done
+#86 naming to docker.io/library/master-ci-pipeline-cartservice 0.0s done
+#86 DONE 0.2s
+
+#87 [frontend builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+#87 ...
+
+#59 [paymentservice internal] load metadata for docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#59 DONE 3.2s
+
+#88 [currencyservice internal] load .dockerignore
+#88 transferring context: 64B 0.0s done
+#88 DONE 0.2s
+
+#89 [paymentservice internal] load .dockerignore
+#89 transferring context: 53B 0.0s done
+#89 DONE 0.2s
+
+#90 [adservice internal] load metadata for docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+#90 ...
+
+#91 [paymentservice stage-1 1/5] FROM docker.io/library/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
+#91 DONE 0.0s
+
+#92 [currencyservice internal] load build context
+#92 transferring context: 517B 0.0s done
+#92 DONE 0.2s
+
+#90 [adservice internal] load metadata for docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+#90 DONE 3.2s
+
+#93 [paymentservice builder 1/5] FROM docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#93 resolve docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#93 ...
+
+#94 [paymentservice internal] load build context
+#94 transferring context: 501B 0.0s done
+#94 DONE 0.1s
+
+#93 [currencyservice builder 1/5] FROM docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#93 resolve docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8 0.3s done
+#93 resolve docker.io/library/node:20.20.0-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8 0.3s done
+#93 DONE 0.3s
+
+#95 [adservice internal] load .dockerignore
+#95 transferring context: 2B done
+#95 DONE 0.3s
+
+#87 [frontend builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+#87 ...
+
+#96 [paymentservice builder 4/5] COPY package*.json ./
+#96 CACHED
+
+#97 [paymentservice stage-1 4/5] COPY --from=builder /usr/src/app/node_modules ./node_modules
+#97 CACHED
+
+#98 [paymentservice builder 5/5] RUN npm install --only=production
+#98 CACHED
+
+#99 [paymentservice stage-1 5/5] COPY . .
+#99 CACHED
+
+#100 [currencyservice builder 3/5] WORKDIR /usr/src/app
+#100 CACHED
+
+#101 [currencyservice stage-1 4/5] COPY --from=builder /usr/src/app/node_modules ./node_modules
+#101 CACHED
+
+#102 [currencyservice builder 2/5] RUN apk add --update --no-cache     python3     make     g++
+#102 CACHED
+
+#103 [currencyservice stage-1 2/5] RUN apk add --no-cache nodejs
+#103 CACHED
+
+#104 [currencyservice stage-1 3/5] WORKDIR /usr/src/app
+#104 CACHED
+
+#105 [currencyservice builder 4/5] COPY package*.json ./
+#105 CACHED
+
+#106 [currencyservice builder 5/5] RUN npm install --only=production
+#106 CACHED
+
+#107 [currencyservice stage-1 5/5] COPY . .
+#107 CACHED
+
+#108 [adservice internal] load build context
+#108 DONE 0.0s
+
+#109 [adservice stage-1 1/3] FROM docker.io/library/eclipse-temurin:25.0.1_8-jre-alpine@sha256:9c65fe190cb22ba92f50b8d29a749d0f1cfb2437e09fe5fbf9ff927c45fc6e99
+#109 DONE 0.0s
+
+#110 [currencyservice] exporting to image
+#110 exporting layers done
+#110 writing image sha256:a00b4e6738734b345fc43ec1970a3d2b51f3a81b207de01b79346224e1afb3ee 0.0s done
+#110 naming to docker.io/library/master-ci-pipeline-currencyservice done
+#110 DONE 0.1s
+
+#111 [paymentservice] exporting to image
+#111 exporting layers done
+#111 writing image sha256:24bec99eec08ab289a42fafc06120cab96db3202ffcb30b9cf6d25c6d3a5c55d done
+#111 naming to docker.io/library/master-ci-pipeline-paymentservice 0.0s done
+#111 DONE 0.1s
+
+#112 [adservice builder 1/9] FROM docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+#112 resolve docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+#112 resolve docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684 0.3s done
+#112 DONE 0.3s
+
+#87 [frontend builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+#87 ...
+
+#108 [adservice internal] load build context
+#108 transferring context: 811B 0.0s done
+#108 DONE 0.1s
+
+#113 [adservice builder 9/9] RUN ./gradlew installDist
+#113 CACHED
+
+#114 [adservice builder 4/9] COPY gradle gradle
+#114 CACHED
+
+#115 [adservice builder 5/9] RUN chmod +x gradlew
+#115 CACHED
+
+#116 [adservice builder 3/9] COPY [build.gradle, gradlew, ./]
+#116 CACHED
+
+#117 [adservice builder 8/9] RUN chmod +x gradlew
+#117 CACHED
+
+#118 [adservice stage-1 2/3] WORKDIR /app
+#118 CACHED
+
+#119 [adservice builder 2/9] WORKDIR /app
+#119 CACHED
+
+#120 [adservice builder 6/9] RUN ./gradlew downloadRepos
+#120 CACHED
+
+#121 [adservice builder 7/9] COPY . .
+#121 CACHED
+
+#122 [adservice stage-1 3/3] COPY --from=builder /app .
+#122 CACHED
+
+#87 [frontend builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+#87 ...
+
+#123 [adservice] exporting to image
+#123 exporting layers done
+#123 writing image sha256:220c2c2ec2120f09800806c15f5f83c3feae0787da3f48713de75b5b42915e9b 0.0s done
+#123 naming to docker.io/library/master-ci-pipeline-adservice done
+#123 DONE 0.1s
+
+#87 [frontend builder 6/6] RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/frontend .
+#87 DONE 71.2s
+
+#45 [frontend stage-1 2/5] WORKDIR /src
+#45 CACHED
+
+#124 [frontend stage-1 3/5] COPY --from=builder /go/bin/frontend /src/server
+#124 CACHED
+
+#125 [frontend stage-1 4/5] COPY ./templates ./templates
+#125 DONE 0.1s
+
+#126 [frontend stage-1 5/5] COPY ./static ./static
+#126 DONE 0.2s
+
+#127 [frontend] exporting to image
+#127 exporting layers 0.0s done
+#127 writing image sha256:cdb9008356204b7fb326abe85f7d0927781f8430862e12499fd767b017d00447 done
+#127 naming to docker.io/library/master-ci-pipeline-frontend done
+#127 DONE 0.1s
+ Network master-ci-pipeline_default  Creating
+ Network master-ci-pipeline_default  Created
+ Container master-ci-pipeline-checkoutservice-1  Creating
+ Container master-ci-pipeline-emailservice-1  Creating
+ Container master-ci-pipeline-redis-cart-1  Creating
+ Container master-ci-pipeline-currencyservice-1  Creating
+ Container master-ci-pipeline-adservice-1  Creating
+ Container master-ci-pipeline-paymentservice-1  Creating
+ Container master-ci-pipeline-cartservice-1  Creating
+ Container master-ci-pipeline-recommendationservice-1  Creating
+ Container master-ci-pipeline-productcatalogservice-1  Creating
+ Container master-ci-pipeline-shippingservice-1  Creating
+ Container master-ci-pipeline-frontend-1  Creating
+ Container master-ci-pipeline-frontend-1  Created
+ Container master-ci-pipeline-shippingservice-1  Created
+ Container master-ci-pipeline-productcatalogservice-1  Created
+ Container master-ci-pipeline-checkoutservice-1  Created
+ Container master-ci-pipeline-cartservice-1  Created
+ Container master-ci-pipeline-adservice-1  Created
+ Container master-ci-pipeline-redis-cart-1  Created
+ Container master-ci-pipeline-emailservice-1  Created
+ Container master-ci-pipeline-recommendationservice-1  Created
+ Container master-ci-pipeline-paymentservice-1  Created
+ Container master-ci-pipeline-currencyservice-1  Created
+ Container master-ci-pipeline-shippingservice-1  Starting
+ Container master-ci-pipeline-cartservice-1  Starting
+ Container master-ci-pipeline-adservice-1  Starting
+ Container master-ci-pipeline-paymentservice-1  Starting
+ Container master-ci-pipeline-recommendationservice-1  Starting
+ Container master-ci-pipeline-checkoutservice-1  Starting
+ Container master-ci-pipeline-currencyservice-1  Starting
+ Container master-ci-pipeline-productcatalogservice-1  Starting
+ Container master-ci-pipeline-emailservice-1  Starting
+ Container master-ci-pipeline-frontend-1  Starting
+ Container master-ci-pipeline-redis-cart-1  Starting
+ Container master-ci-pipeline-shippingservice-1  Started
+ Container master-ci-pipeline-checkoutservice-1  Started
+ Container master-ci-pipeline-recommendationservice-1  Started
+ Container master-ci-pipeline-adservice-1  Started
+ Container master-ci-pipeline-currencyservice-1  Started
+ Container master-ci-pipeline-paymentservice-1  Started
+ Container master-ci-pipeline-redis-cart-1  Started
+ Container master-ci-pipeline-emailservice-1  Started
+ Container master-ci-pipeline-productcatalogservice-1  Started
+ Container master-ci-pipeline-frontend-1  Started
+ Container master-ci-pipeline-cartservice-1  Started
++ echo Waiting 30 seconds for all local microservices to wake up...
+ Waiting 30 seconds for all local microservices to wake up...
++ sleep 30
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (4. Execute E2E Playwright Tests)
+[Pipeline] dir
+Running in /var/lib/jenkins/workspace/Master-CI-Pipeline/playwright-tests
+[Pipeline] {
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/Master-CI-Pipeline/playwright-tests/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Stamalexx/microservices-playwright-testing.git # timeout=10
+Fetching upstream changes from https://github.com/Stamalexx/microservices-playwright-testing.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Stamalexx/microservices-playwright-testing.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 2ce49e7048507a1e0df68ff03f852cdb34b16f35 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 2ce49e7048507a1e0df68ff03f852cdb34b16f35 # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git branch -D main # timeout=10
+ > git checkout -b main 2ce49e7048507a1e0df68ff03f852cdb34b16f35 # timeout=10
+Commit message: ""test""
+ > git rev-list --no-walk 2ce49e7048507a1e0df68ff03f852cdb34b16f35 # timeout=10
+[Pipeline] echo
+ Running Integration Tests against local Ephemeral Environment...
+[Pipeline] sh
++ pwd
++ docker run --rm --network host -v /var/lib/jenkins/workspace/Master-CI-Pipeline/playwright-tests:/e2e -w /e2e -e FRONTEND_URL=http://localhost:8081/ mcr.microsoft.com/playwright:v1.59.1-jammy /bin/bash -c npm install && npx playwright test
+
+up to date, audited 6 packages in 2s
+
+found 0 vulnerabilities
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.14.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.14.1
+npm notice To update run: npm install -g npm@11.14.1
+npm notice
+
+Running 3 tests using 1 worker
+
+ [1A [2K[1/3] [chromium] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+ [1A [2K[chromium] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+cart is empty
+
+ [1A [2K$19.99
+
+ [1A [2K[2/3] [firefox] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+ [1A [2K[firefox] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+cart is empty
+
+ [1A [2K$19.99
+
+ [1A [2K[3/3] [webkit] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+ [1A [2K[webkit] › tests/smoketest.spec.ts:23:7 › App Smoke Tests › User can add multiple items to cart and place an order
+cart is empty
+
+ [1A [2K$19.99
+
+ [1A [2K  3 passed (42.2s)
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (5. Push to Docker Hub)
+[Pipeline] echo
+ TESTS PASSED! Proceeding to push images to Docker Hub...
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ echo ****
++ docker login -u stamalexx --password-stdin
+Login Succeeded
++ docker push stamalexx/frontend:v1.0.192
+The push refers to repository [docker.io/stamalexx/frontend]
+bbd092d715ea: Preparing
+15ad95a91c1b: Preparing
+eda5686f8287: Preparing
+98db4ab4dc5d: Preparing
+5fd2536c39c0: Preparing
+187cfc6d1e3e: Preparing
+ad51d0769d16: Preparing
+4cde6b0bb6f5: Preparing
+bd3cdfae1d3f: Preparing
+6f1cdceb6a31: Preparing
+af5aa97ebe6c: Preparing
+4d049f83d9cf: Preparing
+275a30dd8ce9: Preparing
+f15316efa997: Preparing
+ac2a91ec876d: Preparing
+621c35e751a5: Preparing
+82c60ccaf916: Preparing
+4cde6b0bb6f5: Waiting
+bd3cdfae1d3f: Waiting
+6f1cdceb6a31: Waiting
+af5aa97ebe6c: Waiting
+4d049f83d9cf: Waiting
+275a30dd8ce9: Waiting
+f15316efa997: Waiting
+ac2a91ec876d: Waiting
+621c35e751a5: Waiting
+82c60ccaf916: Waiting
+187cfc6d1e3e: Waiting
+ad51d0769d16: Waiting
+5fd2536c39c0: Layer already exists
+98db4ab4dc5d: Layer already exists
+eda5686f8287: Layer already exists
+187cfc6d1e3e: Layer already exists
+ad51d0769d16: Layer already exists
+4cde6b0bb6f5: Layer already exists
+6f1cdceb6a31: Layer already exists
+bd3cdfae1d3f: Layer already exists
+af5aa97ebe6c: Layer already exists
+4d049f83d9cf: Layer already exists
+275a30dd8ce9: Layer already exists
+f15316efa997: Layer already exists
+ac2a91ec876d: Layer already exists
+621c35e751a5: Layer already exists
+82c60ccaf916: Layer already exists
+15ad95a91c1b: Pushed
+bbd092d715ea: Pushed
+v1.0.192: digest: sha256:5ff7634abc3db146528582442f9933b349fd70701910d1789ce7413f41514d0d size: 3857
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (6. Update GitOps Repo)
+[Pipeline] dir
+Running in /var/lib/jenkins/workspace/Master-CI-Pipeline/gitops-repo
+[Pipeline] {
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/Master-CI-Pipeline/gitops-repo/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Stamalexx/microservices-gitops-config.git # timeout=10
+Fetching upstream changes from https://github.com/Stamalexx/microservices-gitops-config.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Stamalexx/microservices-gitops-config.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 5b4f5e6598ab933b375b5804a335a9f5f1656b8b (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 5b4f5e6598ab933b375b5804a335a9f5f1656b8b # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git branch -D main # timeout=10
+ > git checkout -b main 5b4f5e6598ab933b375b5804a335a9f5f1656b8b # timeout=10
+Commit message: "Auto-Deploy: Updated [frontend] to v1.0.191"
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ git config user.email jenkins@automation.com
++ git config user.name Jenkins CI Server
+[Pipeline] sh
++ sed -i s|image: docker.io/stamalexx/frontend:.*|image: docker.io/stamalexx/frontend:v1.0.192|g helm-chart/values.yaml
+[Pipeline] sh
+Warning: A secret was passed to "sh" using Groovy String interpolation, which is insecure.
+		 Affected argument(s) used the following variable(s): [GITHUB_TOKEN]
+		 See https://jenkins.io/redirect/groovy-string-interpolation for details.
++ git add helm-chart/values.yaml
++ git commit -m Auto-Deploy: Updated [frontend] to v1.0.192
+[main da416d7] Auto-Deploy: Updated [frontend] to v1.0.192
+ 1 file changed, 1 insertion(+), 1 deletion(-)
++ git push https://****@github.com/Stamalexx/microservices-gitops-config.git HEAD:main
+To https://github.com/Stamalexx/microservices-gitops-config.git
+   5b4f5e6..da416d7  HEAD -> main
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+🧹 Tearing down ephemeral environment and cleaning up...
+[Pipeline] sh
++ docker-compose down -v
+time="2026-05-14T07:10:07Z" level=warning msg="/var/lib/jenkins/workspace/Master-CI-Pipeline/docker-compose.yaml: `version` is obsolete"
+ Container master-ci-pipeline-redis-cart-1  Stopping
+ Container master-ci-pipeline-shippingservice-1  Stopping
+ Container master-ci-pipeline-currencyservice-1  Stopping
+ Container master-ci-pipeline-frontend-1  Stopping
+ Container master-ci-pipeline-adservice-1  Stopping
+ Container master-ci-pipeline-recommendationservice-1  Stopping
+ Container master-ci-pipeline-emailservice-1  Stopping
+ Container master-ci-pipeline-productcatalogservice-1  Stopping
+ Container master-ci-pipeline-checkoutservice-1  Stopping
+ Container master-ci-pipeline-cartservice-1  Stopping
+ Container master-ci-pipeline-paymentservice-1  Stopping
+ Container master-ci-pipeline-productcatalogservice-1  Stopped
+ Container master-ci-pipeline-productcatalogservice-1  Removing
+ Container master-ci-pipeline-productcatalogservice-1  Removed
+ Container master-ci-pipeline-shippingservice-1  Stopped
+ Container master-ci-pipeline-shippingservice-1  Removing
+ Container master-ci-pipeline-checkoutservice-1  Stopped
+ Container master-ci-pipeline-checkoutservice-1  Removing
+ Container master-ci-pipeline-checkoutservice-1  Removed
+ Container master-ci-pipeline-shippingservice-1  Removed
+ Container master-ci-pipeline-frontend-1  Stopped
+ Container master-ci-pipeline-frontend-1  Removing
+ Container master-ci-pipeline-adservice-1  Stopped
+ Container master-ci-pipeline-adservice-1  Removing
+ Container master-ci-pipeline-frontend-1  Removed
+ Container master-ci-pipeline-redis-cart-1  Stopped
+ Container master-ci-pipeline-redis-cart-1  Removing
+ Container master-ci-pipeline-adservice-1  Removed
+ Container master-ci-pipeline-redis-cart-1  Removed
+ Container master-ci-pipeline-cartservice-1  Stopped
+ Container master-ci-pipeline-cartservice-1  Removing
+ Container master-ci-pipeline-cartservice-1  Removed
+ Container master-ci-pipeline-emailservice-1  Stopped
+ Container master-ci-pipeline-emailservice-1  Removing
+ Container master-ci-pipeline-emailservice-1  Removed
+ Container master-ci-pipeline-recommendationservice-1  Stopped
+ Container master-ci-pipeline-recommendationservice-1  Removing
+ Container master-ci-pipeline-recommendationservice-1  Removed
+ Container master-ci-pipeline-paymentservice-1  Stopped
+ Container master-ci-pipeline-paymentservice-1  Removing
+ Container master-ci-pipeline-currencyservice-1  Stopped
+ Container master-ci-pipeline-currencyservice-1  Removing
+ Container master-ci-pipeline-currencyservice-1  Removed
+ Container master-ci-pipeline-paymentservice-1  Removed
+ Network master-ci-pipeline_default  Removing
+ Network master-ci-pipeline_default  Removed
+[Pipeline] sh
++ docker image prune -f
+Deleted Images:
+deleted: sha256:b7d7390350141e768bc87dac274522c6250d89436ee82111f43ebfe5e4378157
+deleted: sha256:a971e5f5ef3a70af81adf8c82eccabeac3874c81fb340645186f195a082ee3a0
+deleted: sha256:30c9bf7e15c49a645dd66866567d97e39949b4d28ceab6fd94f9123d98b673b6
+deleted: sha256:02f69bf8c4b76d91e998d34e6651f88b0d7b082fcdbd15f50e9d3b991f6d9277
+deleted: sha256:458efcac8847091d12a4b483bcfa29e6954b1e697948b1e0b8b9b7d0a77ba51e
+deleted: sha256:a6abab9f29036845da69df94dbc2fcaccc1b515acf7322d141d5b7f62b57d35e
+deleted: sha256:1b751fbf3e149a7c1bb3d0b5abe16d36bc76d1fd0c3b41facb85f2be145accf3
+deleted: sha256:fce7ec70482a34e48b17fd2478ba1dce94f682baa0a663d3d61625e3972a1b32
+deleted: sha256:b6b39f6a4022678a192bf4ce5039e82cdd29f4741c6ca8b0af6c64ac7b1e5e0e
+deleted: sha256:3836ed9c0e5ddcc575353f51c4a48cce3db9cfd56b9cbe7ec4cc613ce1961cd7
+deleted: sha256:313c1430a08fc66f6e4992031cc2915e8ee684c41e70d4fefedfc10d1bcf4674
+deleted: sha256:354e4d3ffba4750b582a5b25076b1d9eba435888565817982a260a08af85f944
+deleted: sha256:472ebbf21338b885a820631a15cf6953414bae1dd5c0651541946855fe0c35c3
+deleted: sha256:675eaf3bf5b720380830847057a13e24330b31af7d61934ae4098139fe60233b
+
+Total reclaimed space: 914.9MB
+[Pipeline] echo
+ PIPELINE SUCCESS: Code tested, built, and handed off to Argo CD.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS
