@@ -1,0 +1,171 @@
+// updated pipeline code
+pipeline {
+    agent any 
+
+    environment {
+        DOCKER_CREDS = credentials('docker-hub-creds')
+        GITHUB_TOKEN = credentials('github-token-creds')
+        APP_REPO = "github.com/Stamalexx/microservices-demo-DevOps-apply.git"
+        GITOPS_REPO = "github.com/Stamalexx/microservices-gitops-config.git"
+    }
+
+    stages {
+        stage('1. Checkout & Smart Detect') {
+            steps {
+                git url: "https://${APP_REPO}", branch: 'main'
+                
+                script {
+                    def lastAuthor = sh(script: "git log -1 --pretty='%an'", returnStdout: true).trim()
+                    if (lastAuthor == "Jenkins CI Server") {
+                        currentBuild.result = 'ABORTED'
+                        error("STOPPING LOOP: This change was made by the Jenkins Bot.")
+                    }
+
+                    env.CHANGED_SERVICES = ""
+                    def services = []
+                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    
+                    for (String file : changedFiles.split('\\r?\\n')) {
+                        if (file.startsWith("src/")) {
+                            def parts = file.split('/')
+                            if (parts.length > 1) {
+                                def srv = parts[1] 
+                                if (!services.contains(srv)) {
+                                    services.add(srv)
+                                }
+                            }
+                        }
+                    }
+                    if (services.isEmpty()) { services.add(params.SERVICE_NAME) }
+                    env.CHANGED_SERVICES = services.join(',')
+                    echo " SMART DETECT: Preparing to build -> ${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+
+        stage('2. Build Images (Local Only)') {
+            steps {
+                script {
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                    for (service in servicesToBuild) {
+                        if (service == null || service == "") continue;
+                        def imgName = "stamalexx/${service}"
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}"
+                        
+                        echo "========================================"
+                        echo " BUILDING (BUT NOT PUSHING): ${service}"
+                        echo "========================================"
+                        
+                        // Defensive Pipeline Script: Dynamically searches for the Dockerfile
+                        sh """
+                            if [ -f "src/${service}/src/Dockerfile" ]; then
+                                echo "Found Dockerfile in nested directory (Refactored Upstream)."
+                                cd src/${service}/src
+                                docker build -t ${imgName}:${imgTag} .
+                            elif [ -f "src/${service}/Dockerfile" ]; then
+                                echo "Found Dockerfile in legacy root directory."
+                                cd src/${service}
+                                docker build -t ${imgName}:${imgTag} .
+                            else
+                                echo "FATAL: Dockerfile not found for ${service}. Upstream directory structure may have changed."
+                                exit 1
+                            fi
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('3. Spin Up Ephemeral Environment') {
+            steps {
+                echo " Starting temporary local environment for testing..."
+                // The Online Boutique repo has a docker-compose file we can use
+                sh """
+                    docker-compose up -d --build
+                    echo "Waiting 30 seconds for all local microservices to wake up..."
+                    sleep 30
+                """
+            }
+        }
+
+        stage('4. Execute E2E Playwright Tests') {
+            steps {
+                dir('playwright-tests') {
+                    git url: "https://github.com/Stamalexx/microservices-playwright-testing.git", branch: 'main'
+                    
+                    echo " Running Integration Tests against local Ephemeral Environment..."
+                    sh """
+                        docker run --rm --network host \
+                        -v \$(pwd):/e2e -w /e2e \
+                        -e FRONTEND_URL="http://localhost:8081/" \
+                        mcr.microsoft.com/playwright:v1.59.1-jammy \
+                        /bin/bash -c "npm install && npx playwright test"
+                    """
+                }
+            }
+        }
+
+        stage('5. Push to Docker Hub') {
+            steps {
+                echo "TESTS PASSED! Proceeding to push images to Docker Hub..."
+                script {
+                    def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                    for (service in servicesToBuild) {
+                        if (service == null || service == "") continue;
+                        def imgName = "stamalexx/${service}"
+                        def imgTag = "v1.0.${env.BUILD_NUMBER}"
+                        
+                        sh """
+                            echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin
+                            docker push ${imgName}:${imgTag}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('6. Update GitOps Repo') {
+            steps {
+                dir('gitops-repo') {
+                    git url: "https://${GITOPS_REPO}", branch: 'main', changelog: false, poll: false
+                    script {
+                        def servicesToBuild = env.CHANGED_SERVICES.split(',')
+                        sh """
+                            git config user.email "jenkins@automation.com"
+                            git config user.name "Jenkins CI Server"
+                        """
+                        for (service in servicesToBuild) {
+                            if (service == null || service == "") continue;
+                            def imgTag = "v1.0.${env.BUILD_NUMBER}"
+                            sh """
+                                sed -i "s|image: docker.io/stamalexx/${service}:.*|image: docker.io/stamalexx/${service}:${imgTag}|g" helm-chart/values.yaml
+                            """
+                        }
+                        sh """
+                            git add helm-chart/values.yaml
+                            git commit -m "Auto-Deploy: Updated [${env.CHANGED_SERVICES}] to v1.0.${env.BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@${GITOPS_REPO} HEAD:main
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    // THE JANITOR: This runs no matter what happens above
+    post {
+        always {
+            echo " Tearing down ephemeral environment and cleaning up..."
+            // Stop and remove the temporary containers
+            sh 'docker-compose down -v || true'
+            // Clean up dangling images to save disk space on Jenkins
+            sh 'docker image prune -f || true'
+        }
+        success {
+            echo " PIPELINE SUCCESS: Code tested, built, and handed off to Argo CD."
+        }
+        failure {
+            echo "PIPELINE FAILED: Defective code detected! Deployment to GitOps was blocked."
+        }
+    }
+}
