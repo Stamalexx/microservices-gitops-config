@@ -63,7 +63,7 @@ adService:
   create: true
   replicas: 3
   name: adservice
-  image: docker.io/stamalexx/adservice:v1.0.179
+  image: docker.io/stamalexx/adservice:v1.0.204
   resources:
     requests:
       cpu: 200m
@@ -76,7 +76,7 @@ cartService:
   create: true
   replicas: 3
   name: cartservice
-  image: docker.io/stamalexx/cartservice:v1.0.47
+  image: docker.io/stamalexx/cartservice:v1.0.204
   resources:
     requests:
       cpu: 200m
@@ -89,7 +89,7 @@ checkoutService:
   create: true
   replicas: 3
   name: checkoutservice
-  image: docker.io/stamalexx/checkoutservice:v1.0.48
+  image: docker.io/stamalexx/checkoutservice:v1.0.204
   resources:
     requests:
       cpu: 100m
@@ -102,7 +102,7 @@ currencyService:
   create: true
   replicas: 3
   name: currencyservice
-  image: docker.io/stamalexx/currencyservice:v1.0.198
+  image: docker.io/stamalexx/currencyservice:v1.0.204
   resources:
     requests:
       cpu: 100m
@@ -115,7 +115,7 @@ emailService:
   create: true
   replicas: 3
   name: emailservice
-  image: docker.io/stamalexx/emailservice:v1.0.179
+  image: docker.io/stamalexx/emailservice:v1.0.204
   resources:
     requests:
       cpu: 100m
@@ -128,7 +128,7 @@ frontend:
   create: true
   replicas: 3
   name: frontend
-  image: docker.io/stamalexx/frontend:v1.0.198
+  image: docker.io/stamalexx/frontend:v1.0.204
   externalService: true
   cymbalBranding: true
   # One of: local, gcp, aws, azure, onprem, alibaba. When not set, defaults to "local" unless running in GKE, otherwise auto-sets to gcp.
@@ -154,7 +154,7 @@ frontend:
 loadGenerator:
   create: true
   name: loadgenerator
-  image: docker.io/stamalexx/loadgenerator:v1.0.100
+  image: docker.io/stamalexx/loadgenerator:v1.0.204
   checkFrontendInitContainer: true
   resources:
     requests:
@@ -168,7 +168,7 @@ paymentService:
   create: true
   replicas: 3
   name: paymentservice
-  image: docker.io/stamalexx/paymentservice:v1.0.52
+  image: docker.io/stamalexx/paymentservice:v1.0.204
   resources:
     requests:
       cpu: 100m
@@ -181,7 +181,7 @@ productCatalogService:
   create: true
   replicas: 3
   name: productcatalogservice
-  image: docker.io/stamalexx/productcatalogservice:v1.0.54
+  image: docker.io/stamalexx/productcatalogservice:v1.0.204
   # Specifies an extra latency to any request on productcatalogservice, by default no extra latency.
   extraLatency: ""
   resources:
@@ -196,7 +196,7 @@ recommendationService:
   create: true
   replicas: 3
   name: recommendationservice
-  image: docker.io/stamalexx/recommendationservice:v1.0.55
+  image: docker.io/stamalexx/recommendationservice:v1.0.204
   resources:
     requests:
       cpu: 100m
@@ -209,7 +209,7 @@ shippingService:
   create: true
   replicas: 3
   name: shippingservice
-  image: docker.io/stamalexx/shippingservice:v1.0.56
+  image: docker.io/stamalexx/shippingservice:v1.0.204
   resources:
     requests:
       cpu: 100m
