@@ -1,0 +1,284 @@
+Started by an SCM change
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/lib/jenkins/workspace/Master-CI-Pipeline
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $GITHUB_TOKEN or $DOCKER_CREDS or $DOCKER_CREDS_PSW
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (1. Checkout & Smart Detect)
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/Master-CI-Pipeline/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Stamalexx/microservices-demo-DevOps-apply.git # timeout=10
+Fetching upstream changes from https://github.com/Stamalexx/microservices-demo-DevOps-apply.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/Stamalexx/microservices-demo-DevOps-apply.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision dd843275b402baa829ad41206fbd1c04074e8621 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f dd843275b402baa829ad41206fbd1c04074e8621 # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git branch -D main # timeout=10
+ > git checkout -b main dd843275b402baa829ad41206fbd1c04074e8621 # timeout=10
+Commit message: "The big merge"
+ > git rev-list --no-walk a249ca344b04a2d2bd7dcc50b6882c1b204d9bff # timeout=10
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ git log -1 --pretty=%an
+[Pipeline] sh
++ git diff --name-only HEAD~1 HEAD
+[Pipeline] echo
+ SMART DETECT: Preparing to build -> adservice,cartservice,checkoutservice,currencyservice,emailservice,frontend,loadgenerator,paymentservice,productcatalogservice,recommendationservice,shippingservice,shoppingassistantservice
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (2. Build Images (Local Only))
+[Pipeline] script
+[Pipeline] {
+[Pipeline] echo
+========================================
+[Pipeline] echo
+ BUILDING (BUT NOT PUSHING): adservice
+[Pipeline] echo
+========================================
+[Pipeline] sh
++ cd src/adservice
++ docker build -t stamalexx/adservice:v1.0.199 .
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  97.79kB
+Step 1/15 : ARG BUILDPLATFORM=linux/amd64
+Step 2/15 : FROM --platform=$BUILDPLATFORM eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684 AS builder
+docker.io/library/eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684: Pulling from library/eclipse-temurin
+953cdd413371: Already exists
+4000407e9706: Already exists
+b84e544576dd: Already exists
+4f4fb700ef54: Already exists
+e376267f7e6d: Already exists
+Digest: sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+Status: Downloaded newer image for eclipse-temurin:24.0.2_12-jdk-noble@sha256:dacac8e9a0df0d2bd24e702b4431132875c249930b70555ebd7ca285b5bee684
+ ---> 19785d8f66fe
+Step 3/15 : WORKDIR /app
+ ---> Running in a432faba970d
+ ---> Removed intermediate container a432faba970d
+ ---> 1902f9c85cb5
+Step 4/15 : COPY ["build.gradle", "gradlew", "./"]
+ ---> 781d4c2245fa
+Step 5/15 : COPY gradle gradle
+ ---> bfcd56b63df2
+Step 6/15 : RUN chmod +x gradlew
+ ---> Running in b8970432405c
+ ---> Removed intermediate container b8970432405c
+ ---> a0267a21f7ed
+Step 7/15 : RUN ./gradlew downloadRepos
+ ---> Running in 14e8eb498f74
+Downloading https://services.gradle.org/distributions/gradle-8.14.4-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%..............100%
+
+Welcome to Gradle 8.14.4!
+
+Here are the highlights of this release:
+ - Java 24 support
+ - GraalVM Native Image toolchain selection
+ - Enhancements to test reporting
+ - Build Authoring improvements
+
+For more details see https://docs.gradle.org/8.14.4/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :downloadRepos
+
+[Incubating] Problems report is available at: file:///app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.4/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 31s
+1 actionable task: 1 executed
+ ---> Removed intermediate container 14e8eb498f74
+ ---> 6acdc627475c
+Step 8/15 : COPY . .
+ ---> 59118f6e6ee9
+Step 9/15 : RUN chmod +x gradlew
+ ---> Running in 3dac09125954
+ ---> Removed intermediate container 3dac09125954
+ ---> 2c111861b3e2
+Step 10/15 : RUN ./gradlew installDist
+ ---> Running in 4f0015568b32
+Starting a Gradle Daemon, 1 incompatible and 1 stopped Daemons could not be reused, use --status for details
+> Task :protobufDummy UP-TO-DATE
+> Task :extractIncludeProto
+> Task :extractProto
+> Task :generateProto
+
+> Task :compileJava
+[91mNote: /app/src/main/java/hipstershop/AdService.java uses or overrides a deprecated API.[0m[91m
+[0m[91mNote: Recompile with -Xlint:deprecation for details.[0m[91m
+[0m
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :adService
+> Task :adServiceClient
+> Task :startScripts SKIPPED
+> Task :installDist
+
+[Incubating] Problems report is available at: file:///app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.4/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 30s
+9 actionable tasks: 9 executed
+ ---> Removed intermediate container 4f0015568b32
+ ---> 84fad2ffc0c8
+Step 11/15 : FROM eclipse-temurin:25.0.2_10-jre-alpine@sha256:5fcc27581b238efbfda93da3a103f59e0b5691fe522a7ac03fe8057b0819c888
+docker.io/library/eclipse-temurin:25.0.2_10-jre-alpine@sha256:5fcc27581b238efbfda93da3a103f59e0b5691fe522a7ac03fe8057b0819c888: Pulling from library/eclipse-temurin
+6a0ac1617861: Pulling fs layer
+7af76732d1c8: Pulling fs layer
+d3300773eb35: Pulling fs layer
+e724d96c5cee: Pulling fs layer
+c7a087e3676b: Pulling fs layer
+e724d96c5cee: Waiting
+c7a087e3676b: Waiting
+6a0ac1617861: Verifying Checksum
+6a0ac1617861: Download complete
+6a0ac1617861: Pull complete
+e724d96c5cee: Download complete
+d3300773eb35: Verifying Checksum
+d3300773eb35: Download complete
+7af76732d1c8: Verifying Checksum
+7af76732d1c8: Download complete
+c7a087e3676b: Verifying Checksum
+c7a087e3676b: Download complete
+7af76732d1c8: Pull complete
+d3300773eb35: Pull complete
+e724d96c5cee: Pull complete
+c7a087e3676b: Pull complete
+Digest: sha256:5fcc27581b238efbfda93da3a103f59e0b5691fe522a7ac03fe8057b0819c888
+Status: Downloaded newer image for eclipse-temurin:25.0.2_10-jre-alpine@sha256:5fcc27581b238efbfda93da3a103f59e0b5691fe522a7ac03fe8057b0819c888
+ ---> 85a794aa48de
+Step 12/15 : WORKDIR /app
+ ---> Running in 519d1db1b643
+ ---> Removed intermediate container 519d1db1b643
+ ---> 5f51c2d29775
+Step 13/15 : COPY --from=builder /app .
+ ---> c595878c3f8b
+Step 14/15 : EXPOSE 9555
+ ---> Running in 952cb282dfb6
+ ---> Removed intermediate container 952cb282dfb6
+ ---> 427e00c8772b
+Step 15/15 : ENTRYPOINT ["/app/build/install/hipstershop/bin/AdService"]
+ ---> Running in 97b2f4cc7619
+ ---> Removed intermediate container 97b2f4cc7619
+ ---> 00e8e17f3933
+Successfully built 00e8e17f3933
+Successfully tagged stamalexx/adservice:v1.0.199
+[Pipeline] echo
+========================================
+[Pipeline] echo
+ BUILDING (BUT NOT PUSHING): cartservice
+[Pipeline] echo
+========================================
+[Pipeline] sh
++ cd src/cartservice
++ docker build -t stamalexx/cartservice:v1.0.199 .
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+unable to prepare context: unable to evaluate symlinks in Dockerfile path: lstat /var/lib/jenkins/workspace/Master-CI-Pipeline/src/cartservice/Dockerfile: no such file or directory
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (3. Spin Up Ephemeral Environment)
+Stage "3. Spin Up Ephemeral Environment" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (4. Execute E2E Playwright Tests)
+Stage "4. Execute E2E Playwright Tests" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (5. Push to Docker Hub)
+Stage "5. Push to Docker Hub" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (6. Update GitOps Repo)
+Stage "6. Update GitOps Repo" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+ Tearing down ephemeral environment and cleaning up...
+[Pipeline] sh
++ docker-compose down -v
+time="2026-05-26T07:50:47Z" level=warning msg="/var/lib/jenkins/workspace/Master-CI-Pipeline/docker-compose.yaml: `version` is obsolete"
+[Pipeline] sh
++ docker image prune -f
+Deleted Images:
+deleted: sha256:84fad2ffc0c896017d47447ec7cb9be0031f7f2e5c5db7e46ac5b4e890b9ee8e
+deleted: sha256:1d26994a6b57ec896bf4ee22fbaf1209b6b534bb0786e5eb661a3c5532146420
+deleted: sha256:2c111861b3e2acdc9432daf810e608a73caad213d901e70d56f6f63d3c8534a1
+deleted: sha256:48e49c456e4d0549476b20e203657627dae0929e7a5f6bd5354655f3ef9e4deb
+deleted: sha256:59118f6e6ee9007b13309c56d5cadbd382faf9f04e8d5aa267aec03265c504e7
+deleted: sha256:f6dfabf19d7f317748c800c32c554d0c532981505af46d8b17b736aa3e0ed9b8
+deleted: sha256:6acdc627475c33c362dca5b2ca41751dffe0b1b2d93514c7978e1717dad900c1
+deleted: sha256:5e07292337cf2a4bfc68c27acfe32957c21a5bda7a369fe77b2ea0a131b36bc9
+deleted: sha256:a0267a21f7ed51bab78b018342cba800d0620c669c4abeb0217282fb75ade4a6
+deleted: sha256:81b56bec9c50526cdce15fa4b179d6b4fd65817a7a1e78320c6993260c86c1ad
+deleted: sha256:bfcd56b63df2e69f0145f7d829bf28237eb2491099cf91b252b60d0aae1bb943
+deleted: sha256:eaf1f6cf8245daec92a777563728f56520339739795788c3458744bc85471dbc
+deleted: sha256:781d4c2245fae79215388f2e4b2c434e70c433e29493f160180ad78853eefa8f
+deleted: sha256:0ef9e4147ffbf99b892b7f19d305f3061572172c95a924f55b2bb321d17ce6f1
+deleted: sha256:1902f9c85cb50d4ff2eb1f7b029bea2d5ee9b868a9facb79670775e5b6314ed5
+deleted: sha256:aabb49f3b81453b183cd0c5907293c88470d3ed241d6ae6af5304b0bbe648aac
+untagged: golang@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92
+deleted: sha256:32eb1b17fb288f55faaf325ed5f3188968c4887057459fbe87024092539077bf
+untagged: node@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+deleted: sha256:458b0b7c1c6027b37124839bf527a5c54936ab27a9c9643051a3d801c4560a6c
+deleted: sha256:d0d3e3af0e0169d69642b922d5336f00a3f13a84d20c491d2af8c755dceb8795
+deleted: sha256:1364cda3ba8746afe28f666c113846659f19690c2163ca9e6edf874c8724d4b5
+deleted: sha256:c8ddf445de4c37100b9e72f8d34e628ab89902af1e6799f9b0fc493932e56d34
+
+Total reclaimed space: 377MB
+[Pipeline] echo
+PIPELINE FAILED: Defective code detected! Deployment to GitOps was blocked.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+ERROR: script returned exit code 1
+Finished: FAILURE
